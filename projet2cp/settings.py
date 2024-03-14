@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'projet2cp.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'lmcs-r',
+        'NAME': 'lmcs_r',
         'USER': 'Rofieda',
         'PASSWORD': '@MaaMar@14@LD@AND@IMS@HM@',
         'HOST': 'localhost',   # Or your MySQL server address
