@@ -1,4 +1,8 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+
+
 
 class Projet(models.Model):
     id_projet=models.AutoField(primary_key=True)
@@ -39,7 +43,8 @@ class Chercheur(models.Model):
 
 
 class Conf_journal(models.Model):
-    acronyme=models.CharField(max_length=50, primary_key=True)
+    Conf_Journal_id=models.AutoField(primary_key=True)
+    acronyme=models.CharField(max_length=50)
     nom=models.CharField(max_length=50 ,null=False)
     p_type=models.CharField(max_length=50,null=False, choices=[('Conférence', 'Conférence'), ('Journal', 'Journal')])
     periodicite=models.CharField(max_length=50, choices=[('Ad hoc', 'Ad hoc'), ('Continuelle', 'Continuelle'), ('Saisonnière', 'Saisonnière'), ('Mensuelle', 'Mensuelle'), ('Bimensuelle', 'Bimensuelle'), ('Trimestrielle', 'Trimestrielle'), ('Semestrielle', 'Semestrielle'), ('Annuelle', 'Annuelle'), ('Biennale', 'Biennale'), ('Triennale', 'Triennale'), ('Quadriennale', 'Quadriennale'), ('Quinquemestrielle', 'Quinquemestrielle'), ('Hebdomadaire', 'Hebdomadaire'), ('Biquadrimestrielle', 'Biquadrimestrielle'), ('Spéciale/Supplémentaire', 'Spéciale/Supplémentaire'), ('autre', 'autre')] )
@@ -92,6 +97,7 @@ class Encadrement (models.Model) :
         # Define the composite primary key using unique_together
        # unique_together = ('id_chercheur', 'id_etudiant')
        db_table = 'encadrements'
+       
 
 
 
@@ -115,3 +121,29 @@ class Encadrement (models.Model) :
 
 
 # Create your models here.
+
+
+
+
+
+
+
+
+
+
+class Utilisateur(models.Model):
+    user_id = models.AutoField(primary_key=True)
+    password = models.CharField(max_length=250)
+    chercheur_id = models.OneToOneField('Chercheur', on_delete=models.CASCADE, unique=True,db_column='chercheur_id')
+    email = models.EmailField(unique=True)
+    role_user = models.CharField(max_length=60, choices=[
+        ('Admin', 'Admin'),
+        ('Assistent', 'Assistent'),
+        ('Chercheur', 'Chercheur')
+    ])
+
+    def __str__(self):
+        return f"User ID: {self.user_id}, Email: {self.email}"
+    
+    class Meta:  
+        db_table = 'utilisateur'

@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-wz6mr9e0o#b$@i**o^7fcpy(z7e7pn4fhbmxbknr8363$oczxe'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
@@ -82,7 +82,7 @@ DATABASES = {
         'NAME': 'lmcs_r',
         'USER': 'Rofieda',
         'PASSWORD': '@MaaMar@14@LD@AND@IMS@HM@',
-        'HOST': 'localhost',   # Or your MySQL server address
+        'HOST': 'localhost',   
         'PORT': '3306',        # MySQL default port
     }
 
@@ -129,3 +129,4 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
