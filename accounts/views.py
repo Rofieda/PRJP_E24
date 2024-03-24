@@ -5,10 +5,11 @@ from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
+from django.core.mail import send_mail
 
 
 from accounts.serializers import UserRegisterSerializer, LoginSerializer, \
-    PasswordResetRequestSerializer, SetNewPasswordSerializer, AddUserSerializer
+    PasswordResetRequestSerializer, SetNewPasswordSerializer, AddUserSerializer, UserSerializer
 from rest_framework import status
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import smart_str, DjangoUnicodeDecodeError
@@ -28,13 +29,25 @@ class RegisterView(GenericAPIView):
         serializer = self.serializer_class(data=user)
         if serializer.is_valid(raise_exception=True):
             role = request.data.get('role')
-            serializer.save()
+            user = serializer.save()
+
+            # Send email notification
+            self.send_signup_email(user)
+
             user_data = serializer.data
             return Response({
                 'data': user_data,
-                'message': 'vous etes inscrits au lmcs'
+                'message': 'vous êtes inscrit au lmcs'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def send_signup_email(self, user):
+        subject = 'Bienvenue à LMCS'
+        full_name = f"{user.first_name} {user.last_name}"
+        message = f'Bonjour {full_name},\n\nVous avez été ajouté au labo LMCS avec succès.'
+        from_email = 'your_email@example.com'  # Set your sender email here
+        to_email = user.email
+        send_mail(subject, message, from_email, [to_email])
 
 
 class LoginUserView(GenericAPIView):
@@ -107,14 +120,20 @@ class LogoutAPIView(APIView):
 
         return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
 
+
+
+
 class AddUserView(CreateAPIView):
     serializer_class = AddUserSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        if not self.request.user.is_superuser:
-            raise PermissionDenied("You do not have permission to perform this action.")
-        serializer.save()
+        if not (self.request.user.is_superuser or self.request.user.role == 'admin'):
+            raise PermissionDenied("Vous n'avez pas la permission d'effectuer cette action.")
+        user = serializer.save()
+
+        # Envoyer un email à l'utilisateur ajouté
+        self.send_email_to_user(user)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -122,6 +141,29 @@ class AddUserView(CreateAPIView):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def send_email_to_user(self, user):
+        subject = 'Bienvenue à LMCS'
+        full_name = f"{user.first_name} {user.last_name}"
+        message = f'Bonjour {full_name},\n\nVous avez été ajouté au labo LMCS avec succès.'
+        from_email = 'votre_email@example.com'  # Remplacez par votre adresse e-mail
+        to_email = user.email
+        send_mail(subject, message, from_email, [to_email])
+
+
+class ListUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Vous n'êtes pas authentifié."}, status=401)
+
+        if request.user.is_superuser or request.user.role in ['admin', 'assistant']:
+            users = User.objects.all()
+            serializer = UserSerializer(users, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({"detail": "Vous n'avez pas la permission d'effectuer cette action."}, status=403)
 
 
 
