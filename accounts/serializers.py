@@ -165,3 +165,8 @@ class AddUserSerializer(serializers.ModelSerializer):
         )
         user.assign_role(role)
         return user
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'role']
