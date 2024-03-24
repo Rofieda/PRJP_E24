@@ -1,7 +1,7 @@
 from unicodedata import name
 from django.urls import path
 from .views import RegisterView, LoginUserView, TestingAuthenticatedReq, LogoutAPIView, PasswordResetRequestView, \
-    PasswordResetConfirm, SetNewPasswordView, AddUserView
+    PasswordResetConfirm, SetNewPasswordView, AddUserView, ListUsersView
 
 from rest_framework_simplejwt.views import (TokenRefreshView,)
 
@@ -13,5 +13,6 @@ urlpatterns = [
     path('password-reset-confirm/<uidb64>/<token>/', PasswordResetConfirm.as_view(), name='reset-password-confirm'),
     path('set-new-password/', SetNewPasswordView.as_view(), name='set-new-password'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
-    path('add-user/', AddUserView.as_view(), name='add_user')
+    path('add-user/', AddUserView.as_view(), name='add_user'),
+    path('list_users/', ListUsersView.as_view(), name='list_users'),
     ]
