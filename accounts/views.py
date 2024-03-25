@@ -16,8 +16,8 @@ from django.utils.encoding import smart_str, DjangoUnicodeDecodeError
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework.permissions import IsAuthenticated
 from .models import User
+from rest_framework.generics import DestroyAPIView
 from .permissions import IsAdminUser
-
 
 
 
@@ -165,5 +165,19 @@ class ListUsersView(APIView):
         else:
             return Response({"detail": "Vous n'avez pas la permission d'effectuer cette action."}, status=403)
 
+class DeleteUserView(DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer  # Set the serializer class for this view
 
-
+    def delete(self, request, *args, **kwargs):
+        try:
+            user = self.get_object()
+            # Check if the user sending the request is a superuser or has an admin role
+            if request.user.is_superuser or (request.user.role == 'admin' and request.user != user):
+                user.delete()
+                return Response({"detail": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"detail": "You do not have permission to delete this user."},
+                                status=status.HTTP_403_FORBIDDEN)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
