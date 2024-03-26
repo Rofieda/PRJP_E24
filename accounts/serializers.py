@@ -16,24 +16,27 @@ from .utils import send_normal_email
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from .models import Role
+from django.utils import timezone
 
+
+
+
+User = get_user_model()
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=68, min_length=6, write_only=True)
     password2 = serializers.CharField(max_length=68, min_length=6, write_only=True)
-    role = serializers.ChoiceField(choices=Role.choices)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password', 'password2' , 'role']
+        fields = ['email', 'first_name', 'last_name', 'password', 'password2', 'role']
 
     def validate(self, attrs):
         password = attrs.get('password', '')
         password2 = attrs.get('password2', '')
         if password != password2:
-            raise serializers.ValidationError("passwords do not match")
-
+            raise serializers.ValidationError("Passwords do not match")
         return attrs
 
     def create(self, validated_data):
@@ -46,9 +49,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         )
         user.assign_role(role)
         return user
-
-
-
 
 class LoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=155, min_length=6)
@@ -68,16 +68,53 @@ class LoginSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = authenticate(request, email=email, password=password)
         if not user:
-            raise AuthenticationFailed("invalid credential try again")
+            raise AuthenticationFailed("Invalid credentials. Please try again.")
+
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
 
         tokens = user.tokens()
         return {
             'email': user.email,
             'role': user.role,
-            'full_name': user.get_full_name,
+            'full_name': user.get_full_name,  # Corrected usage
             "access_token": str(tokens.get('access')),
             "refresh_token": str(tokens.get('refresh'))
         }
+
+
+class AddUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(max_length=68, min_length=6, write_only=True)
+    password2 = serializers.CharField(max_length=68, min_length=6, write_only=True)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'password', 'password2', 'role']
+
+    def validate(self, attrs):
+        password = attrs.get('password', '')
+        password2 = attrs.get('password2', '')
+        if password != password2:
+            raise serializers.ValidationError("Passwords do not match")
+        return attrs
+
+    def create(self, validated_data):
+        role = validated_data.pop('role')
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            first_name=validated_data.get('first_name'),
+            last_name=validated_data.get('last_name'),
+            password=validated_data.get('password')
+        )
+        user.assign_role(role)
+        return user
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'role']
+
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -100,7 +137,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             email_body = f"Hi {user.first_name} utiliser ce lien pour réinsialiser votre mot de passe {abslink}"
             data = {
                 'email_body': email_body,
-                'email_subject': "Reset your Password",
+                'email_subject': "Réinitialiser votre mot de passe",
                 'to_email': user.email
             }
             send_normal_email(data)
@@ -127,46 +164,11 @@ class SetNewPasswordSerializer(serializers.Serializer):
             user_id=force_str(urlsafe_base64_decode(uidb64))
             user=User.objects.get(id=user_id)
             if not PasswordResetTokenGenerator().check_token(user, token):
-                raise AuthenticationFailed("reset link is invalid or has expired", 401)
+                raise AuthenticationFailed("Le lien de réinitialisation est invalide ou a expiré", 401)
             if password != confirm_password:
-                raise AuthenticationFailed("passwords do not match")
+                raise AuthenticationFailed("Les mots de passe ne correspondent pas")
             user.set_password(password)
             user.save()
             return user
         except Exception as e:
-            return AuthenticationFailed("link is invalid or has expired")
-
-
-
-
-class AddUserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(max_length=68, min_length=6, write_only=True)
-    password2 = serializers.CharField(max_length=68, min_length=6, write_only=True)
-    role = serializers.ChoiceField(choices=Role.choices)
-
-    class Meta:
-        model = User
-        fields = ['email', 'first_name', 'last_name', 'password', 'password2', 'role']
-
-    def validate(self, attrs):
-        password = attrs.get('password', '')
-        password2 = attrs.get('password2', '')
-        if password != password2:
-            raise serializers.ValidationError("Passwords do not match.")
-        return attrs
-
-    def create(self, validated_data):
-        role = validated_data.pop('role')
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            first_name=validated_data.get('first_name'),
-            last_name=validated_data.get('last_name'),
-            password=validated_data.get('password')
-        )
-        user.assign_role(role)
-        return user
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role']
+            return AuthenticationFailed("Le lien est invalide ou a expiré")
